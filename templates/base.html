@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}智能家居监测控制系统{% endblock %}</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.bootcdn.net/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- ECharts -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+
+    <style>
+        :root {
+            --sidebar-width: 220px;
+        }
+
+        body {
+            background: #f0f2f5;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            padding-top: 20px;
+            z-index: 1000;
+        }
+
+        .sidebar .logo {
+            text-align: center;
+            padding: 10px 0 20px;
+            font-size: 18px;
+            font-weight: bold;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 15px;
+        }
+
+        .sidebar .logo i {
+            font-size: 28px;
+            color: #4fc3f7;
+        }
+
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.7);
+            padding: 12px 20px;
+            margin: 5px 10px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: #fff;
+            background: rgba(79, 195, 247, 0.2);
+        }
+
+        .sidebar .nav-link i {
+            margin-right: 10px;
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 25px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .status-dot.online {
+            background: #4caf50;
+            box-shadow: 0 0 6px #4caf50;
+        }
+
+        .status-dot.offline {
+            background: #f44336;
+        }
+
+        .card-custom {
+            background: #fff;
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .stat-card .value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #1a1a2e;
+        }
+
+        .stat-card .label {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .stat-card .icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+        <div class="logo">
+            <i class="bi bi-house-gear"></i><br>
+            智能家居
+        </div>
+        <nav>
+            <a href="/" class="nav-link {% block nav_index %}{% endblock %}">
+                <i class="bi bi-speedometer2"></i> 仪表盘
+            </a>
+            <a href="/devices" class="nav-link {% block nav_devices %}{% endblock %}">
+                <i class="bi bi-cpu"></i> 设备管理
+            </a>
+            <a href="/monitor" class="nav-link {% block nav_monitor %}{% endblock %}">
+                <i class="bi bi-display"></i> 实时监控
+            </a>
+            <a href="/history" class="nav-link {% block nav_history %}{% endblock %}">
+                <i class="bi bi-graph-up"></i> 历史曲线
+            </a>
+            <a href="/alerts" class="nav-link {% block nav_alerts %}{% endblock %}">
+                <i class="bi bi-bell"></i> 告警管理
+            </a>
+            <a href="/predict" class="nav-link {% block nav_predict %}{% endblock %}">
+                <i class="bi bi-magic"></i> 智能预测
+            </a>
+        </nav>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

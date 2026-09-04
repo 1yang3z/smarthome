@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}设备管理 - 智能家居{% endblock %}
+{% block nav_devices %}active{% endblock %}
+
+{% block content %}
+<h3 class="mb-4"><i class="bi bi-cpu"></i> 设备管理</h3>
+
+<!-- 自动模式开关 -->
+<div class="card-custom mb-3">
+    <div class="d-flex align-items-center justify-content-between">
+        <div>
+            <h5 class="mb-0"><i class="bi bi-magic"></i> 自动控制模式</h5>
+            <small class="text-muted">严重告警时自动触发设备，手动控制可覆盖</small>
+        </div>
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="autoSwitch" checked onchange="toggleAuto()">
+            <label class="form-check-label" id="autoLabel">自动控制已开启</label>
+        </div>
+    </div>
+</div>
+
+<!-- 设备卡片 -->
+<div class="row" id="deviceCards">
+    <div class="col-md-4 mb-3">
+        <div class="card-custom text-center">
+            <h5><i class="bi bi-thermometer-snow"></i> 空调</h5>
+            <p class="text-muted">LED1 — 温度严重异常时自动开启</p>
+            <div class="mb-3">
+                <span class="badge bg-secondary" id="acStatus">关闭</span>
+            </div>
+            <button class="btn btn-outline-primary btn-sm m-1" onclick="manualControl('air_conditioner','on',true)">❄️ 强制开</button>
+            <button class="btn btn-outline-danger btn-sm m-1" onclick="manualControl('air_conditioner','off',true)">🔌 强制关</button>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card-custom text-center">
+            <h5><i class="bi bi-droplet"></i> 除湿器</h5>
+            <p class="text-muted">LED2 — 湿度严重异常时自动开启</p>
+            <div class="mb-3">
+                <span class="badge bg-secondary" id="dehumidifierStatus">关闭</span>
+            </div>
+            <button class="btn btn-outline-primary btn-sm m-1" onclick="manualControl('dehumidifier','on',true)">💧 强制开</button>
+            <button class="btn btn-outline-danger btn-sm m-1" onclick="manualControl('dehumidifier','off',true)">🔌 强制关</button>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card-custom text-center">
+            <h5><i class="bi bi-window"></i> 窗户</h5>
+            <p class="text-muted">LED3 — 光照异常时自动开关</p>
+            <div class="mb-3">
+                <span class="badge bg-secondary" id="windowStatus">关闭</span>
+            </div>
+            <button class="btn btn-outline-success btn-sm m-1" onclick="manualControl('window','open',true)">🪟 强制开</button>
+            <button class="btn btn-outline-danger btn-sm m-1" onclick="manualControl('window','close',true)">🔒 强制关</button>
+        </div>
+    </div>
+</div>
+
+<!-- 设备列表 -->
+<div class="card-custom">
+    <h5>所有设备</h5>
+    <table class="table table-hover table-sm">
+        <thead><tr><th>设备ID</th><th>名称</th><th>类型</th><th>位置</th><th>状态</th></tr></thead>
+        <tbody id="deviceTable"></tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function loadStatus() {
+    fetch('/api/devices/status').then(r => r.json()).then(res => {
+        const d = res.data;
+        document.getElementById('acStatus').textContent = d.air_conditioner === 'on' ? '开启' : '关闭';
+        document.getElementById('dehumidifierStatus').textContent = d.dehumidifier === 'on' ? '开启' : '关闭';
+        document.getElementById('windowStatus').textContent = d.window === 'open' ? '打开' : '关闭';
+        document.getElementById('autoSwitch').checked = res.auto_mode;
+        document.getElementById('autoLabel').textContent = res.auto_mode ? '自动控制已开启' : '自动控制已关闭';
+    });
+    fetch('/api/devices').then(r => r.json()).then(res => {
+        let html = '';
+        res.data.forEach(d => {
+            html += `<tr><td>${d.device_id}</td><td>${d.device_name}</td><td><span class="badge bg-secondary">${d.device_type}</span></td><td>${d.location}</td><td>${d.status}</td></tr>`;
+        });
+        document.getElementById('deviceTable').innerHTML = html;
+    });
+}
+
+function manualControl(device, action, force) {
+    fetch('/api/devices/control', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({device, action, force})
+    }).then(r => r.json()).then(() => loadStatus());
+}
+
+function toggleAuto() {
+    const on = document.getElementById('autoSwitch').checked;
+    fetch('/api/devices/auto', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({auto_mode: on})
+    }).then(r => r.json()).then(() => loadStatus());
+}
+
+loadStatus();
+setInterval(loadStatus, 5000);
+</script>
+{% endblock %}

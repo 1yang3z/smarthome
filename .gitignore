@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 环境变量
+.env
+
+# IDE
+.idea/
+.vscode/
+
+# 数据库
+*.db
+
+# 模型文件（体积大）
+model/*.pkl
+
+# 系统文件
+.DS_Store
+Thumbs.db

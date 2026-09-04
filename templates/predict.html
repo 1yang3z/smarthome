@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}智能预测 - 智能家居{% endblock %}
+{% block nav_predict %}active{% endblock %}
+
+{% block content %}
+<h3 class="mb-4"><i class="bi bi-magic"></i> 智能温湿度预测（双模型对比）</h3>
+
+<div class="row mb-3">
+    <div class="col-md-4">
+        <div class="card-custom">
+            <h6>🤖 预测模型</h6>
+            <p class="mb-1">模型1：<b>随机森林 (Random Forest)</b></p>
+            <p class="mb-1">模型2：<b>线性回归 (Linear Regression)</b></p>
+            <p class="mb-0">预测时长：<b>未来6小时</b></p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card-custom">
+            <h6>📊 模型性能对比</h6>
+            <table class="table table-sm mb-0" id="compareTable">
+                <tr><td>指标</td><td>🌲 随机森林</td><td>📈 线性回归</td></tr>
+                <tr><td>温度 MAE</td><td id="rfTemp">--</td><td id="lrTemp">--</td></tr>
+                <tr><td>湿度 MAE</td><td id="rfHumid">--</td><td id="lrHumid">--</td></tr>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card-custom">
+            <h6>📝 说明</h6>
+            <p class="mb-0 text-muted">
+                橙色虚线 = 随机森林预测<br>
+                粉色点线 = 线性回归预测<br>
+                MAE 越小模型越准
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- 温度对比图 -->
+<div class="card-custom">
+    <h5>🌡️ 温度预测对比（未来6小时）</h5>
+    <div id="predictTempChart" style="height: 350px;"></div>
+</div>
+
+<!-- 湿度对比图 -->
+<div class="card-custom">
+    <h5>💧 湿度预测对比（未来6小时）</h5>
+    <div id="predictHumidChart" style="height: 350px;"></div>
+</div>
+
+<!-- 预测明细 -->
+<div class="card-custom">
+    <h5>📋 预测明细（随机森林）</h5>
+    <table class="table table-sm table-hover">
+        <thead>
+            <tr><th>时间</th><th>温度 (RF)</th><th>湿度 (RF)</th><th>建议</th></tr>
+        </thead>
+        <tbody id="predictTable">
+            <tr><td colspan="4" class="text-center">加载中...</td></tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const predictTempChart = echarts.init(document.getElementById('predictTempChart'));
+const predictHumidChart = echarts.init(document.getElementById('predictHumidChart'));
+
+function loadPrediction() {
+    fetch('/api/predict')
+        .then(r => r.json())
+        .then(res => {
+            if (!res.success) {
+                document.getElementById('predictTable').innerHTML =
+                    `<tr><td colspan="4" class="text-center text-danger">${res.message}</td></tr>`;
+                return;
+            }
+
+            const data = res.data;
+            const timestamps = data.timestamps;
+            const temps_rf = data.temperature_rf;
+            const temps_lr = data.temperature_lr;
+            const humids_rf = data.humidity_rf;
+            const humids_lr = data.humidity_lr;
+
+            // 性能指标
+            document.getElementById('rfTemp').textContent = data.rf.temp_mae.toFixed(2) + '°C';
+            document.getElementById('lrTemp').textContent = data.lr.temp_mae.toFixed(2) + '°C';
+            document.getElementById('rfHumid').textContent = data.rf.humid_mae.toFixed(2) + '%';
+            document.getElementById('lrHumid').textContent = data.lr.humid_mae.toFixed(2) + '%';
+
+            // 温度对比图
+            predictTempChart.setOption({
+                title: { text: `温度预测对比（最佳: ${data.best_temp}）`, left: 'center' },
+                tooltip: { trigger: 'axis' },
+                legend: { data: ['随机森林', '线性回归'], bottom: 5 },
+                grid: { left: 50, right: 30, top: 50, bottom: 50 },
+                xAxis: { type: 'category', data: timestamps, axisLabel: { rotate: 30, fontSize: 10 } },
+                yAxis: { type: 'value', name: '温度 (°C)' },
+                dataZoom: [{ type: 'inside' }],
+                series: [
+                    {
+                        name: '随机森林', data: temps_rf, type: 'line', smooth: true,
+                        lineStyle: { color: '#ff9800', width: 2, type: 'dashed' },
+                        areaStyle: { color: 'rgba(255,152,0,0.08)' }
+                    },
+                    {
+                        name: '线性回归', data: temps_lr, type: 'line', smooth: true,
+                        lineStyle: { color: '#e91e63', width: 2, type: 'dotted' },
+                        areaStyle: { color: 'rgba(233,30,99,0.05)' }
+                    }
+                ]
+            });
+
+            // 湿度对比图
+            predictHumidChart.setOption({
+                title: { text: `湿度预测对比（最佳: ${data.best_humid}）`, left: 'center' },
+                tooltip: { trigger: 'axis' },
+                legend: { data: ['随机森林', '线性回归'], bottom: 5 },
+                grid: { left: 50, right: 30, top: 50, bottom: 50 },
+                xAxis: { type: 'category', data: timestamps, axisLabel: { rotate: 30, fontSize: 10 } },
+                yAxis: { type: 'value', name: '湿度 (%)' },
+                dataZoom: [{ type: 'inside' }],
+                series: [
+                    {
+                        name: '随机森林', data: humids_rf, type: 'line', smooth: true,
+                        lineStyle: { color: '#2196f3', width: 2, type: 'dashed' },
+                        areaStyle: { color: 'rgba(33,150,243,0.08)' }
+                    },
+                    {
+                        name: '线性回归', data: humids_lr, type: 'line', smooth: true,
+                        lineStyle: { color: '#e91e63', width: 2, type: 'dotted' },
+                        areaStyle: { color: 'rgba(233,30,99,0.05)' }
+                    }
+                ]
+            });
+
+            // 明细表（用随机森林的值）
+            let tableHtml = '';
+            for (let i = 0; i < timestamps.length; i++) {
+                let suggestion = '✅ 正常范围';
+                if (temps_rf[i] > 30) suggestion = '⚠️ 温度偏高，建议通风';
+                else if (temps_rf[i] < 20) suggestion = '⚠️ 温度偏低，注意保暖';
+                if (humids_rf[i] > 75) suggestion += ' | 湿度偏高';
+                else if (humids_rf[i] < 40) suggestion += ' | 湿度偏低';
+                tableHtml += `<tr>
+                    <td>${timestamps[i]}</td>
+                    <td><b>${temps_rf[i]}°C</b></td>
+                    <td><b>${humids_rf[i]}%</b></td>
+                    <td>${suggestion}</td>
+                </tr>`;
+            }
+            document.getElementById('predictTable').innerHTML = tableHtml;
+        })
+        .catch(err => {
+            document.getElementById('predictTable').innerHTML =
+                '<tr><td colspan="4" class="text-center text-danger">预测服务暂不可用</td></tr>';
+        });
+}
+
+loadPrediction();
+</script>
+{% endblock %}

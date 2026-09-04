@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block title %}告警管理 - 智能家居{% endblock %}
+{% block nav_alerts %}active{% endblock %}
+
+{% block content %}
+<h3 class="mb-4"><i class="bi bi-bell"></i> 告警管理</h3>
+
+<!-- 告警等级说明 -->
+<div class="card-custom mb-3">
+    <h5><i class="bi bi-info-circle"></i> 告警等级说明</h5>
+    <div class="row">
+        <div class="col-md-4">
+            <div class="p-2 border rounded bg-danger bg-opacity-10">
+                <span class="badge bg-danger">严重 Danger</span>
+                <p class="mb-0 mt-1"><small>触发条件：超过阈值5°C/10%/光强超标<br>自动动作：自动控制对应设备</small></p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-2 border rounded bg-warning bg-opacity-10">
+                <span class="badge bg-warning text-dark">重要 Critical</span>
+                <p class="mb-0 mt-1"><small>触发条件：超过设定阈值<br>自动动作：仅记录，建议处理</small></p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-2 border rounded bg-info bg-opacity-10">
+                <span class="badge bg-info">提醒 Warning</span>
+                <p class="mb-0 mt-1"><small>触发条件：接近阈值<br>自动动作：仅记录</small></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 统计卡片 -->
+<div class="row mb-4" id="statsRow">
+    <div class="col-md-3">
+        <div class="card-custom stat-card">
+            <div class="icon text-secondary"><i class="bi bi-flag"></i></div>
+            <div class="value" id="totalCount">--</div>
+            <div class="label">总告警</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-custom stat-card">
+            <div class="icon text-danger"><i class="bi bi-exclamation-triangle"></i></div>
+            <div class="value" id="dangerCount">--</div>
+            <div class="label">🔴 严重</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-custom stat-card">
+            <div class="icon text-warning"><i class="bi bi-exclamation-circle"></i></div>
+            <div class="value" id="criticalCount">--</div>
+            <div class="label">🟡 重要</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-custom stat-card">
+            <div class="icon text-info"><i class="bi bi-info-circle"></i></div>
+            <div class="value" id="unreadCount">--</div>
+            <div class="label">未读告警</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 阈值配置 -->
+    <div class="col-md-4">
+        <div class="card-custom">
+            <h5><i class="bi bi-sliders"></i> 告警阈值配置</h5>
+            <form id="thresholdForm">
+                <div class="mb-2">
+                    <label class="form-label">🌡️ 温度上限 (°C) — 超过为重要，超+5为严重</label>
+                    <input type="number" class="form-control form-control-sm" id="tempHigh" step="0.5">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">🌡️ 温度下限 (°C) — 低于为重要，低-5为严重</label>
+                    <input type="number" class="form-control form-control-sm" id="tempLow" step="0.5">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">💧 湿度上限 (%) — 超过为重要，超+10为严重</label>
+                    <input type="number" class="form-control form-control-sm" id="humidHigh" step="1">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">💧 湿度下限 (%) — 低于为重要，低-10为严重</label>
+                    <input type="number" class="form-control form-control-sm" id="humidLow" step="1">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">💡 光照上限 (lux) — 超过即为严重，自动关窗</label>
+                    <input type="number" class="form-control form-control-sm" id="lightHigh" step="10">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">💡 光照下限 (lux) — 低于即为严重，自动开窗</label>
+                    <input type="number" class="form-control form-control-sm" id="lightLow" step="10">
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-check-lg"></i> 保存阈值
+                </button>
+            </form>
+            <div id="thresholdMsg" class="mt-2"></div>
+        </div>
+    </div>
+
+    <!-- 级别筛选 + 告警列表 -->
+    <div class="col-md-8">
+        <div class="card-custom">
+            <div class="mb-3">
+                <button class="btn btn-sm btn-outline-secondary me-2" onclick="filterAlerts('')">全部</button>
+                <button class="btn btn-sm btn-outline-danger me-2" onclick="filterAlerts('danger')">🔴 严重</button>
+                <button class="btn btn-sm btn-outline-warning me-2" onclick="filterAlerts('critical')">🟡 重要</button>
+                <button class="btn btn-sm btn-outline-info me-2" onclick="filterAlerts('warning')">🔵 提醒</button>
+                <button class="btn btn-sm btn-outline-success" onclick="loadAlerts('')">
+                    <i class="bi bi-arrow-repeat"></i> 刷新
+                </button>
+            </div>
+            <table class="table table-hover table-sm">
+                <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>级别</th>
+                        <th>类型</th>
+                        <th>内容</th>
+                        <th>阈值</th>
+                        <th>实际值</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody id="alertTable">
+                    <tr><td colspan="7" class="text-center">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const levelBadge = {
+    'danger': '<span class="badge bg-danger">严重</span>',
+    'critical': '<span class="badge bg-warning text-dark">重要</span>',
+    'warning': '<span class="badge bg-info">提醒</span>'
+};
+const typeMap = {
+    'temp_high': '🌡️ 温度过高',
+    'temp_low': '🌡️ 温度过低',
+    'humidity_high': '💧 湿度过高',
+    'humidity_low': '💧 湿度过低',
+    'light_high': '💡 光照过强',
+    'light_low': '💡 光照过弱'
+};
+
+// 加载阈值
+fetch('/api/thresholds')
+    .then(r => r.json())
+    .then(res => {
+        document.getElementById('tempHigh').value = res.data.temp_high;
+        document.getElementById('tempLow').value = res.data.temp_low;
+        document.getElementById('humidHigh').value = res.data.humidity_high;
+        document.getElementById('humidLow').value = res.data.humidity_low;
+        document.getElementById('lightHigh').value = res.data.light_high;
+        document.getElementById('lightLow').value = res.data.light_low;
+    });
+
+// 保存阈值
+document.getElementById('thresholdForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const data = {
+        temp_high: document.getElementById('tempHigh').value,
+        temp_low: document.getElementById('tempLow').value,
+        humidity_high: document.getElementById('humidHigh').value,
+        humidity_low: document.getElementById('humidLow').value,
+        light_high: document.getElementById('lightHigh').value,
+        light_low: document.getElementById('lightLow').value
+    };
+    fetch('/api/thresholds', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(res => {
+        document.getElementById('thresholdMsg').innerHTML =
+            res.success ? '<span class="text-success">✅ 阈值已保存到数据库，重启不丢失</span>'
+                        : '<span class="text-danger">❌ 更新失败</span>';
+    });
+});
+
+// 加载统计
+function loadStats() {
+    fetch('/api/alerts/stats')
+        .then(r => r.json())
+        .then(res => {
+            const d = res.data;
+            document.getElementById('totalCount').textContent = d.total;
+            document.getElementById('dangerCount').textContent = d.by_level.danger;
+            document.getElementById('criticalCount').textContent = d.by_level.critical;
+            document.getElementById('unreadCount').textContent = d.unread;
+        });
+}
+
+// 加载告警列表
+function loadAlerts(level) {
+    let url = '/api/alerts?limit=200';
+    if (level) url += '&level=' + level;
+    fetch(url)
+        .then(r => r.json())
+        .then(res => {
+            let html = '';
+            res.data.forEach(a => {
+                html += `<tr class="${a.is_read ? '' : 'table-warning'}">
+                    <td><small>${a.created_at}</small></td>
+                    <td>${levelBadge[a.alert_level] || a.alert_level}</td>
+                    <td>${typeMap[a.alert_type] || a.alert_type}</td>
+                    <td>${a.alert_message}</td>
+                    <td>${a.threshold_value}</td>
+                    <td><b>${a.actual_value}</b></td>
+                    <td>${a.is_read ? '<span class="badge bg-success">已读</span>'
+                                    : `<button class="btn btn-sm btn-outline-success" onclick="markRead(${a.id})">标记已读</button>`}</td>
+                </tr>`;
+            });
+            if (!res.data.length) html = '<tr><td colspan="7" class="text-center text-success">✅ 暂无告警</td></tr>';
+            document.getElementById('alertTable').innerHTML = html;
+        });
+}
+
+function filterAlerts(level) {
+    loadAlerts(level);
+}
+
+function markRead(id) {
+    fetch(`/api/alerts/${id}/read`, { method: 'POST' })
+        .then(() => { loadAlerts(''); loadStats(); });
+}
+
+loadStats();
+loadAlerts('');
+setInterval(() => { loadStats(); loadAlerts(''); }, 10000);
+</script>
+{% endblock %}

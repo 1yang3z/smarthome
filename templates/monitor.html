@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}实时监控 - 智能家居{% endblock %}
+{% block nav_monitor %}active{% endblock %}
+
+{% block content %}
+<h3 class="mb-4"><i class="bi bi-display"></i> 实时监控</h3>
+
+<div class="row">
+    <!-- 室内环境 -->
+    <div class="col-md-8">
+        <h5 class="mb-3"><i class="bi bi-house"></i> 室内环境</h5>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card-custom text-center">
+                    <h5>🌡️ 温度</h5>
+                    <div style="font-size: 48px; font-weight: bold; color: #ff9800;" id="tempDisplay">--°C</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card-custom text-center">
+                    <h5>💧 湿度</h5>
+                    <div style="font-size: 48px; font-weight: bold; color: #2196f3;" id="humidDisplay">--%</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card-custom text-center">
+                    <h5>💡 光照</h5>
+                    <div style="font-size: 48px; font-weight: bold; color: #4caf50;" id="lightDisplay">--lux</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 室外天气 -->
+    <div class="col-md-4">
+        <div class="card-custom">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5><i class="bi bi-cloud-sun"></i> 室外天气</h5>
+                <select class="form-select form-select-sm w-auto" id="citySelect" onchange="changeCity()">
+                    <option value="101031100">滨海新区</option>
+                    <option value="101030100">天津</option>
+                    <option value="101010100">北京</option>
+                    <option value="101020100">上海</option>
+                    <option value="101210101">杭州</option>
+                </select>
+            </div>
+            <div class="text-center mb-3">
+                <div style="font-size: 60px;" id="weatherIcon">☀️</div>
+                <div style="font-size: 36px; font-weight: bold;" id="weatherTemp">--°C</div>
+                <div id="weatherText">--</div>
+            </div>
+            <hr>
+            <div class="row text-center">
+                <div class="col-6">
+                    <small class="text-muted">体感温度</small>
+                    <div id="feelsLike">--°C</div>
+                </div>
+                <div class="col-6">
+                    <small class="text-muted">湿度</small>
+                    <div id="weatherHumidity">--%</div>
+                </div>
+                <div class="col-6 mt-2">
+                    <small class="text-muted">风向</small>
+                    <div id="windDir">--</div>
+                </div>
+                <div class="col-6 mt-2">
+                    <small class="text-muted">风力</small>
+                    <div id="windScale">--</div>
+                </div>
+            </div>
+            <div class="text-center mt-2">
+                <small class="text-muted" id="weatherUpdateTime">更新中...</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateMonitor() {
+    fetch('/api/sensor/latest')
+        .then(r => r.json())
+        .then(res => {
+            if (res.data) {
+                document.getElementById('tempDisplay').textContent = res.data.temperature + '°C';
+                document.getElementById('humidDisplay').textContent = res.data.humidity + '%';
+                document.getElementById('lightDisplay').textContent = (res.data.light || '--') + ' lux';
+            }
+        });
+}
+
+function loadWeather() {
+    fetch('/api/weather')
+        .then(r => r.json())
+        .then(res => {
+            if (res.success && res.data.success) {
+                const w = res.data;
+                document.getElementById('weatherTemp').textContent = w.temperature + '°C';
+                document.getElementById('weatherText').textContent = w.condition;
+                document.getElementById('feelsLike').textContent = w.feels_like + '°C';
+                document.getElementById('weatherHumidity').textContent = w.humidity + '%';
+                document.getElementById('windDir').textContent = w.wind_dir;
+                document.getElementById('windScale').textContent = w.wind_scale + '级';
+                document.getElementById('weatherUpdateTime').textContent = '更新于 ' + w.update_time;
+                document.getElementById('weatherIcon').textContent = getWeatherIcon(w.icon);
+            } else {
+                document.getElementById('weatherTemp').textContent = '--';
+                document.getElementById('weatherUpdateTime').textContent = '获取失败';
+            }
+        });
+}
+
+function getWeatherIcon(code) {
+    const map = {
+        '100': '☀️', '101': '🌤️', '102': '⛅', '103': '☁️',
+        '300': '🌦️', '301': '🌧️', '302': '⛈️', '400': '❄️',
+        '500': '🌫️', '501': '🌫️'
+    };
+    return map[code] || '🌡️';
+}
+
+function changeCity() {
+    const cityId = document.getElementById('citySelect').value;
+    fetch('/api/weather/set_city', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({city_id: cityId})
+    }).then(() => loadWeather());
+}
+
+updateMonitor();
+loadWeather();
+setInterval(updateMonitor, 5000);
+setInterval(loadWeather, 300000);  // 5分钟更新一次
+</script>
+{% endblock %}
